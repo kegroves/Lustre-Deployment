@@ -1,0 +1,147 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "newStorageAccountName": {
+            "type": "string"
+        },
+        "storageAccountType": {
+            "type": "string",
+            "defaultValue": "Standard_LRS",
+            "allowedValues": [
+                "Standard_LRS",
+                "Standard_GRS",
+                "Standard_ZRS"
+            ],
+        },
+        "location": {
+            "type": "string",
+            "allowedValues": [
+                "West US",
+                "East US"
+            ]
+        }
+        "numberOfStorageAccounts": {
+            "type": "int"
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[concat(parameters('newStorageAccountName'), copyIndex())]",
+            "apiVersion": "2014-12-01-preview",
+            "location": "[parameters('location')]",
+            "copy": {
+                "name": "storageAccountLoop",
+                "count": "[parameters('numberOfStorageAccounts')]"
+            },
+            "properties": {
+                "accountType": "[parameters('storageAccountType')]"
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[parameters('virtualNetworkName')]",
+            "apiVersion": "2014-12-01-preview",
+            "location": "[parameters('region')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('addressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('subnet1Name')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('subnet1Prefix')]"
+                        }
+                    },
+                    {
+                        "name": "[parameters('subnet2Name')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('subnet2Prefix')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[concat('publicIP', copyIndex())]",
+            "apiVersion": "2014-12-01-preview",
+            "location": "[parameters('region')]",
+            "copy": {
+                "name": "publicIPLoop",
+                "count": "[parameters('numberOfInstances')]"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic"
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[concat('nic', copyindex())]",
+            "apiVersion": "2014-12-01-preview",
+            "location": "[parameters('region')]",
+            "copy": {
+                "name": "nicLoop",
+                "count": "[parameters('numberOfInstances')]"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
+                "[concat('Microsoft.Network/publicIPAddresses/', 'publicIP', copyindex())]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses',concat('publicIP', copyindex()))]"
+                            },
+                            "subnet": {
+                                "id": "[variables('subnet1Ref')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Micorsoft.Compute/virtualMachines",
+            "name": "[parameters('vmName')]",
+            "apiVersion": "2014-12-01-preview",
+            "location": "[parameters('location')]",
+            "copy": {
+                "name": "virtualMachineLoop",
+                "count": "[parameters('vmSize')]"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', parameters('newStorageAccountName'))]",
+                "[concat('Microsoft.Network/netowrkInterfaces/', 'nic', copyIndex())]"
+            ],
+            "properties": {
+                "hardwareProfile": "[parameters('vmSize')]"
+            },
+            "osProfile": {
+                "computername": "[concat('vm', copyIndex())]",
+                "adminUsername": "[parameters('adminUsername')]",
+                "adminPassword": "[parameters('adminPassword')]"
+            },
+            "storageProfile": {
+                "sourceImage": {
+                    "id": "[variables('sourceImageName')]"
+                },
+                "destinationVhdsContainer": "[concat('http://', parameters('storageAccountName').'.blob.core.windows.net/vhds/')]"
+            },
+            "networkProfile": [
+                { 
+                    "id": "[resourceID('Micorosft.Network/networkInterfaces', concat('nic', copyIndex()))]"
+                }
+            ]
+
+        }
+    ]
+}
