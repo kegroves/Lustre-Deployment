@@ -12,7 +12,7 @@
                 "Standard_LRS",
                 "Standard_GRS",
                 "Standard_ZRS"
-            ],
+            ]
         },
         "location": {
             "type": "string",
@@ -20,10 +20,54 @@
                 "West US",
                 "East US"
             ]
-        }
+        },
         "numberOfStorageAccounts": {
-            "type": "int"
+            "type": "int",
+            "defaultValue": 1
+        },
+        "adminUsername": {
+            "type": "string"
+        },
+        "adminPassword": {
+            "type": "securestring"
+        },
+        "subscriptionId": {
+            "type": "string"
+        },
+        "virtualNetworkName": {
+            "type": "string",
+            "defaultValue": "myVNET"
+        },
+        "vmSize": {
+            "type": "string",
+            "defaultValue": "Standard_A0"
+        },
+        "addressPrefix": {
+            "type": "string",
+            "defaultValue": "10.0.0.0/16"
+        },
+        "subnet1Name": {
+            "type": "string",
+            "defaultValue": "Subnet-1"
+        },
+        "subnet2Name": {
+            "type": "string",
+            "defaultValue": "Subnet-2"
+        },
+        "subnet1Prefix": {
+            "type": "string",
+            "defaultValue": "10.0.0.0/24"
+        },
+        "subnet2Prefix": {
+            "type": "string",
+            "defaultValue": "10.0.1.0/24"
         }
+    },
+    "variables": {
+        "vmSourceImageName": "Replace with image name",
+        "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',parameters('virtualNetworkName'))]",
+        "subnet1Ref": "[concat(variables('vnetID'),'/subnets/',parameters('subnet1Name'))]",
+        "sourceImageName": "[concat('/',parameters('subscriptionId'),'/services/images/',variables('vmSourceImageName'))]"
     },
     "resources": [
         {
